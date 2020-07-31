@@ -1,39 +1,32 @@
 package main
 
 import (
-	"encoding/json"
+	"app/speller"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/thoas/go-funk"
 )
 
 var (
-	Token string
+	token string
 )
 
 func init() {
 
-	flag.StringVar(&Token, "t", "", "Bot Token")
+	flag.StringVar(&token, "t", "", "Bot Token")
 	flag.Parse()
-}
 
-type BadWord struct {
-	Word string   `json:word`
-	S    []string `json:s`
 }
 
 func main() {
 
-	dg, err := discordgo.New("Bot " + Token)
+	dg, err := discordgo.New("Bot " + token)
 
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
@@ -63,60 +56,67 @@ func main() {
 
 }
 
-func checkOnErrors(str string) string {
-
-	resp, err := http.Get("https://speller.yandex.net/services/spellservice.json/checkText?text=" + url.PathEscape(str))
-
-	if err == nil {
-		body, _ := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		data := []BadWord{}
-		json.Unmarshal(body, &data)
-
-		var result []string
-
-		result = (funk.Map(data, func(word BadWord) string {
-
-			var result strings.Builder
-
-			result.WriteString("Говно слово:" + word.Word + "\r\n")
-			result.WriteString("Правильно: " + strings.Join(word.S, ","))
-
-			return result.String()
-
-		})).([]string)
-
-		return strings.Join(result, "\r\n-----\r\n")
-
-	} else {
-		return "Ошибка, Яндекс "
-	}
-
-}
-
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
-	// Ignore all messages created by the bot itself
-	// This isn't required in this specific example but it's a good practice.
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
 
-	fmt.Println(m.Content)
+	if m.Content == "!help" {
+		sendMsg(s, m.ChannelID, "!git - ссылка на гит исходники")
+	} else if m.Content == "!count" {
 
-	result := checkOnErrors(m.Content)
+		members, _ := s.GuildMembers(m.GuildID, "0", 20)
 
-	fmt.Println(result)
+		var ids []string
 
-	s.ChannelMessageSend(m.ChannelID, result)
+		for _, v := range members {
+			ids = append(ids, v.User.ID)
+		}
 
-	// If the message is "ping" reply with "Pong!"
-	if m.Content == "ping" {
-		s.ChannelMessageSend(m.ChannelID, "Pong!")
+		result := speller.CounterForUsers(ids)
+
+		var resultStr strings.Builder
+
+		for k, v := range result {
+
+			user := findUser(members, k)
+
+			resultStr.WriteString(user.Username + ": " + strconv.Itoa(v))
+
+			sendMsg(s, m.ChannelID, resultStr.String())
+
+		}
+
+	} else if m.Content == "!git" {
+		sendMsg(s, m.ChannelID, "https://github.com/Weaders/DiscordSpellChecker")
+	} else {
+
+		result := speller.CheckString(m.Content)
+
+		speller.AddCountForUser(m.Author.ID, len(result))
+
+		sendMsg(s, m.ChannelID, strings.Join(result, "\r\n-------\r\n"))
 	}
 
-	// If the message is "pong" reply with "Ping!"
-	if m.Content == "pong" {
-		s.ChannelMessageSend(m.ChannelID, "Ping!")
+}
+
+func sendMsg(s *discordgo.Session, channelID string, msg string) {
+
+	_, err := s.ChannelMessageSend(channelID, msg)
+
+	if err != nil {
+		println(err)
 	}
+
+}
+
+func findUser(users []*discordgo.Member, id string) *discordgo.User {
+	for _, v := range users {
+		if v.User.ID == id {
+			return v.User
+		}
+	}
+
+	return nil
 }
