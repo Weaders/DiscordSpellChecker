@@ -33,8 +33,6 @@ type BadWord struct {
 
 func main() {
 
-	Token = "NzM4ODE2NjcyNTUwNDg2MDI3.XyRapQ.6idKBSTTNxDrKRthd7VMuJ6eFRE"
-
 	dg, err := discordgo.New("Bot " + Token)
 
 	if err != nil {
