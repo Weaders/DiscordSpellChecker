@@ -1,0 +1,2 @@
+# DiscordSpellChecker
+Go spell checker
