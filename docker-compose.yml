@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  app:
+    build: .
+    command: app -t NzM4ODE2NjcyNTUwNDg2MDI3.XyRapQ.11mJ2-wOOsBV_JpMsJVI6IxB7hM
+    volumes: 
+      - .:/go/src/app
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
