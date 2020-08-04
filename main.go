@@ -1,33 +1,37 @@
 package main
 
 import (
-	"flag"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"strconv"
 	"strings"
 	"syscall"
 
-	"github.com/weaders/DiscordSpellChecker/speller"
-
 	"github.com/bwmarrin/discordgo"
+	"github.com/weaders/DiscordSpellChecker/speller"
 )
 
-var (
-	token string
-)
-
-func init() {
-
-	flag.StringVar(&token, "t", "", "Bot Token")
-	flag.Parse()
-
+type settings struct {
+	Token string `json:token`
 }
 
 func main() {
 
-	dg, err := discordgo.New("Bot " + token)
+	data, err := ioutil.ReadFile("settings.json")
+
+	if err != nil {
+		fmt.Println("can not find file settings.json", err)
+		return
+	}
+
+	settings := settings{}
+
+	json.Unmarshal(data, &settings)
+
+	dg, err := discordgo.New("Bot " + settings.Token)
 
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
