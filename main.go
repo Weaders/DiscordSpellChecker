@@ -1,7 +1,6 @@
 package main
 
 import (
-	"app/speller"
 	"flag"
 	"fmt"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/weaders/DiscordSpellChecker/speller"
 
 	"github.com/bwmarrin/discordgo"
 )
